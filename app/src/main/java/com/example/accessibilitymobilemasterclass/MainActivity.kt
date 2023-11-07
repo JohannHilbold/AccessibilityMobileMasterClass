@@ -18,12 +18,14 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -36,12 +38,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.accessibilitymobilemasterclass.ui.theme.AccessibilityMobileMasterClassTheme
@@ -70,7 +75,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier, onExit: () -> Unit) {
     val (first, second, third, fourth, fifth, sixth, seventh) = remember { FocusRequester.createRefs() }
@@ -84,13 +89,15 @@ fun Greeting(name: String, modifier: Modifier = Modifier, onExit: () -> Unit) {
             ) {
                 Text("First field")
             }
-            TextButton(
-                {},
-                Modifier
-                    .focusRequester(third)
-                    .focusProperties { next = fourth }
-            ) {
-                Text("Third field")
+            Row (modifier = Modifier
+                .focusRequester(third)
+                .focusProperties { next = fourth }
+                .semantics(mergeDescendants = false){}){
+                Text(text = "Name:")
+                val textFieldValue = remember { mutableStateOf(TextFieldValue()) }
+                TextField(value = textFieldValue.value, onValueChange = { textFieldValue.value = it },label = {
+                    Text("not merging")
+                })
             }
         }
 
@@ -103,13 +110,17 @@ fun Greeting(name: String, modifier: Modifier = Modifier, onExit: () -> Unit) {
             ) {
                 Text("Second field")
             }
-            TextButton(
-                {},
-                Modifier
-                    .focusRequester(fourth)
-                    .focusProperties { next = fifth }
-            ) {
-                Text("Fourth field")
+            Row (modifier = Modifier
+                .focusRequester(fourth)
+                .focusProperties { next = fifth }
+                .semantics(mergeDescendants = true){}){
+                Text(text = "Name:")
+                val textFieldValue = remember { mutableStateOf(TextFieldValue()) }
+                TextField(value = textFieldValue.value,
+                    onValueChange = { textFieldValue.value = it },
+                    label = {
+                        Text("merging")
+                    })
             }
         }
         Button(onClick = { },
@@ -117,6 +128,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier, onExit: () -> Unit) {
             Modifier
                 .focusRequester(fifth)
                 .focusProperties { next = sixth }
+                .semantics(mergeDescendants = false) { }
         ) {
             Icon(
                 imageVector = Icons.Filled.Favorite,
@@ -139,19 +151,40 @@ fun Greeting(name: String, modifier: Modifier = Modifier, onExit: () -> Unit) {
         ) {
             Text(text = "Search", modifier = Modifier.clearAndSetSemantics { })
         }
+        val playCustomAction = CustomAccessibilityAction(label = "clickety click") {
+            onExit()
+            true
+        }
+        val plugCustomActions = listOf(playCustomAction)
         Button(
             onClick = onExit,
             modifier =
             Modifier
-                .focusRequester(seventh)
-                .focusProperties { next = first }
                 .semantics {
-                    contentDescription = "Navigate to the next screen"
-                    role = Role.Button
+                    customActions = plugCustomActions
                 }
         ) {
-            Text(text = "Next screen plsss", modifier = Modifier.clearAndSetSemantics { })
+            Text(text = "Next screen plsss")
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AccessibleTextField(){
+    Row (modifier = Modifier.semantics(mergeDescendants = true){}){
+        Text(text = "Name:")
+        val textFieldValue = remember { mutableStateOf(TextFieldValue()) }
+        TextField(value = textFieldValue.value, onValueChange = { textFieldValue.value = it })
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NonAccessibleTextField(){
+    Row {
+        Text(text = "Name:")
+        val textFieldValue = remember { mutableStateOf(TextFieldValue()) }
+        TextField(value = textFieldValue.value, onValueChange = { textFieldValue.value = it })
     }
 }
 
@@ -177,8 +210,7 @@ fun NextScreen(){
         ) {
             Text("Here you can subscribe",
                 Modifier
-                    .weight(1f)
-                    .clearAndSetSemantics { })
+                    .weight(1f))
             Checkbox(checked = checked, onCheckedChange = null)
         }
         StateDescriptionSlider()
